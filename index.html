@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Metrics Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        /* Global Style */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.8), rgba(50, 50, 50, 0.8));
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto; /* Allow the body to scroll */
+        }
+
+        #dashboard {
+            width: 80%;
+            max-width: 1000px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(15px); /* Glassmorphism */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease-in-out;
+            max-height: 90vh; /* Limit the height to allow scrolling */
+            overflow-y: auto; /* Enable scrolling inside the dashboard */
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease-in-out;
+        }
+
+        .input-section {
+            margin-bottom: 25px;
+        }
+
+        input[type="file"], select {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]:hover, select:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #dashboard {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="dashboard">
+        <h2>Radio Metrics Dashboard</h2>
+
+        <!-- Time Series Section -->
+        <div class="input-section">
+            <h3 class="section-title">Time Series Data</h3>
+            <p>Upload your JSON file for Time Series data:</p>
+            <input type="file" id="timeSeriesInput" accept=".json">
+            <div class="chart-container" id="timeSeries">
+                <div id="timeSeriesChart"></div>
+            </div>
+        </div>
+
+        <!-- Frequency Spectrum Section -->
+        <div class="input-section">
+            <h3 class="section-title">Frequency Spectrum Data</h3>
+            <p>Upload your JSON file for Frequency Spectrum data:</p>
+            <input type="file" id="frequencySpectrumInput" accept=".json">
+            <label for="colorScale">Select Colorscale: </label>
+            <select id="colorScale">
+                <option value="Viridis">Viridis</option>
+                <option value="Cividis">Cividis</option>
+                <option value="Plasma">Plasma</option>
+                <option value="Inferno">Inferno</option>
+                <option value="Magma">Magma</option>
+                <option value="Rainbow">Rainbow</option>
+            </select>
+            <div class="chart-container" id="frequencySpectrum">
+                <div id="frequencyChart"></div>
+                <div id="waterfallChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let timeAnimationInterval;
+        let globalFrequencyData = null;
+
+        document.getElementById('timeSeriesInput').addEventListener('change', handleTimeSeriesUpload);
+        document.getElementById('frequencySpectrumInput').addEventListener('change', handleFrequencyUpload);
+        document.getElementById('colorScale').addEventListener('change', updateWaterfallSpectrum);
+
+        // Handle Time Series JSON Upload
+        function handleTimeSeriesUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        if (Array.isArray(jsonData) && jsonData.length > 0 && 'Time' in jsonData[0] && 'Intensity' in jsonData[0]) {
+                            startTimeSeriesPlotting(jsonData);
+                        } else {
+                            alert('Invalid JSON format for Time Series data. Please ensure it contains "Time" and "Intensity" fields.');
+                        }
+                    } catch (error) {
+                        alert('Error parsing JSON file. Please upload a valid Time Series JSON file.');
+                    }
+                };
+
+                reader.readAsText(file);
+            }
+        }
+
+        function startTimeSeriesPlotting(data) {
+            clearInterval(timeAnimationInterval);
+
+            const timeData = [];
+            const intensityData = [];
+
+            const trace = {
+                x: timeData,
+                y: intensityData,
+                mode: 'lines',
+                name: 'Intensity',
+                line: { color: '#007bff' }
+            };
+
+            const layout = {
+                title: 'Signal Intensity Over Time',
+                xaxis: { title: 'Time (s)' },
+                yaxis: { title: 'Intensity' },
+                margin: { t: 50, r: 30, b: 50, l: 50 }
+            };
+
+            Plotly.newPlot('timeSeriesChart', [trace], layout);
+
+            let index = 0;
+
+            timeAnimationInterval = setInterval(() => {
+                if (index < data.length) {
+                    timeData.push(data[index].Time);
+                    intensityData.push(data[index].Intensity);
+
+                    Plotly.update('timeSeriesChart', {
+                        x: [timeData],
+                        y: [intensityData]
+                    });
+
+                    index++;
+                } else {
+                    clearInterval(timeAnimationInterval);
+                }
+            }, 100);
+        }
+
+        // Handle Frequency Spectrum JSON Upload
+        function handleFrequencyUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        if (Array.isArray(jsonData) && jsonData.length > 0 && 'Frequency' in jsonData[0] && 'Intensity1' in jsonData[0]) {
+                            globalFrequencyData = jsonData;
+                            generateFrequencySpectrum(jsonData);
+                            generateWaterfallSpectrum(jsonData);
+                        } else {
+                            alert('Invalid JSON format for Frequency Spectrum data. Please ensure it contains "Frequency" and "Intensity1" fields.');
+                        }
+                    } catch (error) {
+                        alert('Error parsing JSON file. Please upload a valid Frequency Spectrum JSON file.');
+                    }
+                };
+
+                reader.readAsText(file);
+            }
+        }
+
+        function generateFrequencySpectrum(data) {
+            const frequencies = data.map(item => item.Frequency);
+            const intensity1 = data.map(item => item.Intensity1);
+            const intensity2 = data.map(item => item.Intensity2 || null);
+
+            const trace1 = {
+                x: frequencies,
+                y: intensity1,
+                mode: 'lines',
+                name: 'Intensity1',
+                line: { color: '#007bff' }
+            };
+
+            const traces = [trace1];
+
+            if (intensity2.some(value => value !== null)) {
+                const trace2 = {
+                    x: frequencies,
+                    y: intensity2,
+                    mode: 'lines',
+                    name: 'Intensity2',
+                    line: { color: '#ff7f0e' }
+                };
+                traces.push(trace2);
+            }
+
+            const layout = {
+                title: 'Frequency Spectrum',
+                xaxis: { title: 'Frequency (Hz)' },
+                yaxis: { title: 'Intensity' },
+                margin: { t: 50, r: 30, b: 50, l: 50 }
+            };
+
+            Plotly.newPlot('frequencyChart', traces, layout);
+        }
+
+        function generateWaterfallSpectrum(data) {
+            const frequencies = data.map(item => item.Frequency);
+            const intensities = data.map(item => item.Intensity1);
+
+            const trace = {
+                z: [intensities],
+                x: frequencies,
+                colorscale: document.getElementById('colorScale').value,
+                type: 'heatmap',
+                colorbar: { title: 'Intensity' }
+            };
+
+            const layout = {
+                title: 'Waterfall Spectrum',
+                xaxis: { title: 'Frequency (Hz)' },
+                yaxis: { title: 'Time' },
+                margin: { t: 50, r: 30, b: 50, l: 50 }
+            };
+
+            Plotly.newPlot('waterfallChart', [trace], layout);
+        }
+
+        function updateWaterfallSpectrum() {
+            if (globalFrequencyData) {
+                generateWaterfallSpectrum(globalFrequencyData);
+            }
+        }
+    </script>
+</body>
+</html>
