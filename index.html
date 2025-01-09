@@ -11,32 +11,40 @@
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, rgba(30, 30, 30, 0.8), rgba(50, 50, 50, 0.8));
-            color: #fff;
-            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: auto; /* Allow the body to scroll */
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Light Mode */
+        body.light-mode {
+            background: #f4f7fc;
+            color: #333;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background: #1e1e1e;
+            color: #fff;
         }
 
         #dashboard {
-            width: 80%;
+            width: 90%;
             max-width: 1000px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 30px;
-            backdrop-filter: blur(15px); /* Glassmorphism */
+            backdrop-filter: blur(15px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             transition: all 0.3s ease-in-out;
-            max-height: 90vh; /* Limit the height to allow scrolling */
-            overflow-y: auto; /* Enable scrolling inside the dashboard */
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         h2 {
             text-align: center;
             font-size: 2.5rem;
-            color: #fff;
             margin-bottom: 30px;
         }
 
@@ -87,6 +95,43 @@
             background-color: #0056b3;
         }
 
+        /* Dark Mode Button */
+        .toggle-button {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background-color: #007bff;
+            padding: 10px 15px;
+            border-radius: 50px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Sliders */
+        .slider-container {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+
+        .slider {
+            width: 100%;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .slider-values {
+            display: flex;
+            justify-content: space-between;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             #dashboard {
@@ -95,9 +140,11 @@
         }
     </style>
 </head>
-<body>
+<body class="light-mode">
 
     <div id="dashboard">
+        <button class="toggle-button" onclick="toggleDarkMode()">🌙</button>
+        
         <h2>Radio Metrics Dashboard</h2>
 
         <!-- Time Series Section -->
@@ -129,6 +176,26 @@
                 <div id="waterfallChart"></div>
             </div>
         </div>
+
+        <!-- Time Filter Slider -->
+        <div class="slider-container">
+            <label class="slider-label" for="timeRange">Time Range</label>
+            <input type="range" id="timeRange" class="slider" min="0" max="100" step="1">
+            <div class="slider-values">
+                <span>0s</span>
+                <span>100s</span>
+            </div>
+        </div>
+
+        <!-- Frequency Filter Slider -->
+        <div class="slider-container">
+            <label class="slider-label" for="frequencyRange">Frequency Range</label>
+            <input type="range" id="frequencyRange" class="slider" min="0" max="1000" step="1">
+            <div class="slider-values">
+                <span>0 Hz</span>
+                <span>1000 Hz</span>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -138,6 +205,22 @@
         document.getElementById('timeSeriesInput').addEventListener('change', handleTimeSeriesUpload);
         document.getElementById('frequencySpectrumInput').addEventListener('change', handleFrequencyUpload);
         document.getElementById('colorScale').addEventListener('change', updateWaterfallSpectrum);
+        document.getElementById('timeRange').addEventListener('input', updateTimeRange);
+        document.getElementById('frequencyRange').addEventListener('input', updateFrequencyRange);
+
+        // Toggle Dark Mode
+        function toggleDarkMode() {
+            const body = document.body;
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                document.querySelector('.toggle-button').textContent = '🌞';
+            } else {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                document.querySelector('.toggle-button').textContent = '🌙';
+            }
+        }
 
         // Handle Time Series JSON Upload
         function handleTimeSeriesUpload(event) {
@@ -151,10 +234,10 @@
                         if (Array.isArray(jsonData) && jsonData.length > 0 && 'Time' in jsonData[0] && 'Intensity' in jsonData[0]) {
                             startTimeSeriesPlotting(jsonData);
                         } else {
-                            alert('Invalid JSON format for Time Series data. Please ensure it contains "Time" and "Intensity" fields.');
+                            alert('Invalid JSON format for Time Series data.');
                         }
                     } catch (error) {
-                        alert('Error parsing JSON file. Please upload a valid Time Series JSON file.');
+                        alert('Error parsing JSON file.');
                     }
                 };
 
@@ -218,16 +301,17 @@
                             generateFrequencySpectrum(jsonData);
                             generateWaterfallSpectrum(jsonData);
                         } else {
-                            alert('Invalid JSON format for Frequency Spectrum data. Please ensure it contains "Frequency" and "Intensity1" fields.');
+                            alert('Invalid JSON format for Frequency Spectrum data.');
                         }
                     } catch (error) {
-                        alert('Error parsing JSON file. Please upload a valid Frequency Spectrum JSON file.');
+                        alert('Error parsing JSON file.');
                     }
                 };
 
                 reader.readAsText(file);
             }
         }
+
 
         function generateFrequencySpectrum(data) {
             const frequencies = data.map(item => item.Frequency);
@@ -292,6 +376,20 @@
                 generateWaterfallSpectrum(globalFrequencyData);
             }
         }
+
+        // Update Sliders for Filtering
+        function updateTimeRange() {
+            const timeRange = document.getElementById('timeRange').value;
+            console.log('Selected Time Range:', timeRange);
+            // Implement logic to filter the data based on this range
+        }
+
+        function updateFrequencyRange() {
+            const frequencyRange = document.getElementById('frequencyRange').value;
+            console.log('Selected Frequency Range:', frequencyRange);
+            // Implement logic to filter the data based on this range
+        }
     </script>
+
 </body>
 </html>
