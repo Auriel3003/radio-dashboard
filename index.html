@@ -7,39 +7,51 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         /* Global Style */
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: background 0.3s, color 0.3s;
-        }
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.3s, color 0.3s;
+    background-size: cover; /* Ensures the image covers the entire background */
+    background-repeat: no-repeat; /* Prevents the image from repeating */
+    background-position: center; /* Centers the image */
+}
 
-        /* Light Mode */
-        body.light-mode {
-            background: #f4f7fc;
-            color: #333;
-        }
+/* Light Mode */
+body.light-mode {
+    background: #f4f7fc;
+    color: #333;
+    background-image: url('https://wallpapers.com/images/hd/radio-telescope-1920-x-1080-wallpaper-0f8b2zebaogt1roc.jpg'); /* Replace with your light mode image URL */
+}
 
-        /* Dark Mode */
-        body.dark-mode {
-            background: #1e1e1e;
-            color: #fff;
-        }
+/* Dark Mode */
+body.dark-mode {
+    background: #1e1e1e;
+    color: #fff;
+    background-image: url('https://wallpapers.com/images/hd/radio-telescope-1920-x-1080-wallpaper-dtyrw6njhphdtak2.jpg'); /* Replace with your dark mode image URL */
+}
+
 
         #dashboard {
-            width: 90%;
-            max-width: 1000px;
+            width: 100%;
+            max-width: 1500px;
+            max-height: 1000px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 30px;
-            backdrop-filter: blur(15px);
+            backdrop-filter: blur(5px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             transition: all 0.3s ease-in-out;
             max-height: 90vh;
             overflow-y: auto;
+                /* Centering the div */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
         }
 
         h2 {
@@ -53,14 +65,69 @@
             margin-bottom: 10px;
         }
 
-        .chart-container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease-in-out;
-        }
+    .chart-container {
+        display: flex;
+        gap: 20px; /* Adds space between the charts */
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 15px;
+        margin-top: 10px; 
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease-in-out;
+    }
+
+    .chart {
+        flex: 1; /* Ensures both charts take up equal space */
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease-in-out;
+    }
+
+    #frequencySpectrum.chart-container {
+        display: flex;
+        gap: 20px; /* Adds space between the charts */
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease-in-out;
+    }
+
+    #frequencySpectrum .chart {
+        flex: 1; /* Ensures both charts take up equal space */
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Time Series Chart (Separate Styling) */
+        #timeSeries.chart-container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease-in-out;
+        width: 100%; /* Ensures it stretches across the parent container */
+        max-width: 1400px; /* Increase this value to make it wider */
+    }
+    /* Time Series Chart */
+    #timeSeriesChart {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease-in-out;
+        width: 100%; /* Stretches the graph within the container */
+
+    }
+    
 
         .input-section {
             margin-bottom: 25px;
@@ -137,6 +204,10 @@
             #dashboard {
                 width: 90%;
             }
+            .chart-container {
+            flex-direction: column; /* Stacks the charts vertically on smaller screens */
+        }
+
         }
     </style>
 </head>
@@ -154,48 +225,32 @@
             <input type="file" id="timeSeriesInput" accept=".json">
             <div class="chart-container" id="timeSeries">
                 <div id="timeSeriesChart"></div>
+                <div id="modifiedDatasetsChart"></div>
+
             </div>
         </div>
 
         <!-- Frequency Spectrum Section -->
-        <div class="input-section">
-            <h3 class="section-title">Frequency Spectrum Data</h3>
-            <p>Upload your JSON file for Frequency Spectrum data:</p>
-            <input type="file" id="frequencySpectrumInput" accept=".json">
-            <label for="colorScale">Select Colorscale: </label>
-            <select id="colorScale">
-                <option value="Viridis">Viridis</option>
-                <option value="Cividis">Cividis</option>
-                <option value="Plasma">Plasma</option>
-                <option value="Inferno">Inferno</option>
-                <option value="Magma">Magma</option>
-                <option value="Rainbow">Rainbow</option>
-            </select>
-            <div class="chart-container" id="frequencySpectrum">
-                <div id="frequencyChart"></div>
-                <div id="waterfallChart"></div>
-            </div>
-        </div>
+<div class="input-section">
+    <h3 class="section-title">Frequency Spectrum Data</h3>
+    <p>Upload your JSON file for Frequency Spectrum data:</p>
+    <input type="file" id="frequencySpectrumInput" accept=".json">
+    <label for="colorScale">Select Colorscale: </label>
+    <select id="colorScale">
+        <option value="Viridis">Viridis</option>
+        <option value="Cividis">Cividis</option>
+        <option value="Plasma">Plasma</option>
+        <option value="Inferno">Inferno</option>
+        <option value="Magma">Magma</option>
+        <option value="Rainbow">Rainbow</option>
+    </select>
+    <div class="chart-container" id="frequencySpectrum">
+        <div id="frequencyChart" class="chart"></div>
+        <div id="waterfallChart" class="chart"></div>
+    </div>
+</div>
 
-        <!-- Time Filter Slider -->
-        <div class="slider-container">
-            <label class="slider-label" for="timeRange">Time Range</label>
-            <input type="range" id="timeRange" class="slider" min="0" max="100" step="1">
-            <div class="slider-values">
-                <span>0s</span>
-                <span>100s</span>
-            </div>
-        </div>
-
-        <!-- Frequency Filter Slider -->
-        <div class="slider-container">
-            <label class="slider-label" for="frequencyRange">Frequency Range</label>
-            <input type="range" id="frequencyRange" class="slider" min="0" max="1000" step="1">
-            <div class="slider-values">
-                <span>0 Hz</span>
-                <span>1000 Hz</span>
-            </div>
-        </div>
+        
     </div>
 
     <script>
@@ -322,7 +377,7 @@
                 x: frequencies,
                 y: intensity1,
                 mode: 'lines',
-                name: 'Intensity1',
+                name: 'Reciever1',
                 line: { color: '#007bff' }
             };
 
@@ -333,7 +388,7 @@
                     x: frequencies,
                     y: intensity2,
                     mode: 'lines',
-                    name: 'Intensity2',
+                    name: 'Reciever2',
                     line: { color: '#ff7f0e' }
                 };
                 traces.push(trace2);
